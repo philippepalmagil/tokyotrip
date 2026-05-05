@@ -1,0 +1,1432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tokyo — May 9–16, 2026</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+  <style>
+    :root {
+      --black: #111;
+      --white: #fff;
+      --gray: #888;
+      --light: #f5f5f3;
+      --border: #e8e8e5;
+      --accent: #c0392b;
+      --panel: 420px;
+      --nav: 52px;
+      --tabs: 48px;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--white);
+      color: var(--black);
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 1000;
+      height: var(--nav);
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .nav-logo {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--black);
+    }
+
+    .nav-hint {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: #bbb;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── CITY HEADER (in left panel) ── */
+    .city-header {
+      padding: 28px 32px 22px;
+      background: var(--light);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .city-eyebrow {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .city-name {
+      font-size: 52px;
+      font-weight: normal;
+      letter-spacing: -0.025em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .city-jp {
+      font-size: 13px;
+      color: var(--gray);
+      font-family: 'Helvetica Neue', sans-serif;
+      letter-spacing: 0.18em;
+    }
+
+    /* ── STATS ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .stat {
+      padding: 16px 20px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+
+    .stat:last-child { border-right: none; }
+
+    .stat-num {
+      display: block;
+      font-size: 28px;
+      font-weight: normal;
+      letter-spacing: -0.02em;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--gray);
+    }
+
+    /* ── APP SHELL ── */
+    .app {
+      display: flex;
+      height: calc(100vh - var(--nav));
+      margin-top: var(--nav);
+    }
+
+    /* ── LEFT PANEL ── */
+    .left {
+      width: var(--panel);
+      flex-shrink: 0;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+    }
+
+    /* ── DAY TABS ── */
+    .day-tabs {
+      display: flex;
+      height: var(--tabs);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      flex-shrink: 0;
+      background: var(--white);
+      scrollbar-width: none;
+    }
+
+    .day-tabs::-webkit-scrollbar { display: none; }
+
+    .day-tab {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.18s;
+      border-right: 1px solid var(--border);
+      background: none;
+      gap: 2px;
+    }
+
+    .day-tab:last-child { border-right: none; }
+
+    .day-tab:hover { background: var(--light); }
+
+    .day-tab.active {
+      border-bottom-color: var(--black);
+      background: var(--white);
+    }
+
+    .day-tab.active .tab-num { color: var(--black); }
+
+    .tab-num {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--gray);
+      text-transform: uppercase;
+    }
+
+    .tab-date {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: #aaa;
+      white-space: nowrap;
+    }
+
+    .tab-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      margin-top: 2px;
+    }
+
+    /* ── DAY PANELS ── */
+    .day-panels {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .day-panel {
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 0;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(6px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+
+    .day-panel.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: translateY(0);
+    }
+
+    .day-panel::-webkit-scrollbar { width: 4px; }
+    .day-panel::-webkit-scrollbar-track { background: transparent; }
+    .day-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── DAY PANEL HEADER ── */
+    .panel-header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--light);
+    }
+
+    .panel-day-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--gray);
+      margin-bottom: 6px;
+    }
+
+    .panel-title {
+      font-size: 22px;
+      font-weight: normal;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+
+    .panel-area {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 12px;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── PLACE CARDS ── */
+    .place-cards { padding: 16px 20px 40px; display: flex; flex-direction: column; gap: 12px; }
+
+    .place-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      background: var(--white);
+    }
+
+    .place-card.active {
+      border-color: #aaa;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .place-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 18px;
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .place-card.active .place-card-header {
+      border-bottom-color: var(--border);
+      background: var(--light);
+    }
+
+    .place-card-header:hover { background: var(--light); }
+
+    .place-card-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .place-color-bar {
+      width: 3px;
+      height: 32px;
+      border-radius: 2px;
+      flex-shrink: 0;
+    }
+
+    .place-card-name {
+      font-size: 17px;
+      font-weight: normal;
+      letter-spacing: -0.01em;
+    }
+
+    .place-card-station {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: var(--gray);
+      margin-top: 2px;
+    }
+
+    .place-map-btn {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: var(--gray);
+      background: none;
+      border: 1px solid var(--border);
+      padding: 5px 11px;
+      border-radius: 20px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+    }
+
+    .place-map-btn:hover {
+      border-color: var(--black);
+      color: var(--black);
+    }
+
+    .place-card.active .place-map-btn {
+      background: var(--black);
+      color: var(--white);
+      border-color: var(--black);
+    }
+
+    /* ── PLACE CARD BODY ── */
+    .place-card-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .place-card.active .place-card-body { max-height: 600px; }
+
+    .place-card-content { padding: 18px 18px 18px 33px; }
+
+    .place-section-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+
+    .place-desc {
+      font-size: 14px;
+      color: #444;
+      line-height: 1.8;
+      margin-bottom: 16px;
+    }
+
+    .place-highlights {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .place-highlight {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .highlight-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+    .highlight-text {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      color: #444;
+      line-height: 1.5;
+    }
+
+    .highlight-text strong { color: var(--black); font-weight: 500; }
+
+    /* ── TBD STATE ── */
+    .tbd-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      gap: 12px;
+      color: #ccc;
+      text-align: center;
+      padding: 40px;
+    }
+
+    .tbd-panel p {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+    }
+
+    /* ── RESTAURANT SECTION ── */
+    .restaurant-section {
+      border-top: 1px solid var(--border);
+      margin-top: 4px;
+    }
+
+    .restaurant-section-header {
+      padding: 14px 20px 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .restaurant-section-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--gray);
+    }
+
+    .restaurant-empty {
+      padding: 18px 20px 28px;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 12px;
+      color: #bbb;
+      letter-spacing: 0.04em;
+      border: 1.5px dashed var(--border);
+      border-radius: 4px;
+      margin: 0 20px 24px;
+      text-align: center;
+    }
+
+    .restaurant-area-group { margin-bottom: 4px; }
+
+    .restaurant-area-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: #bbb;
+      padding: 8px 20px 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .restaurant-area-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .restaurant-cards { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+    .rest-card {
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      overflow: hidden;
+      background: var(--white);
+      transition: border-color 0.18s, box-shadow 0.18s;
+    }
+
+    .rest-card.active {
+      border-color: #aaa;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+    }
+
+    .rest-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      cursor: pointer;
+      border-bottom: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .rest-card.active .rest-card-header {
+      border-bottom-color: var(--border);
+      background: #fffaf9;
+    }
+
+    .rest-card-header:hover { background: #fffaf9; }
+
+    .rest-card-left { display: flex; align-items: center; gap: 10px; }
+
+    .rest-fork {
+      font-size: 14px;
+      flex-shrink: 0;
+      opacity: 0.7;
+    }
+
+    .rest-card-name {
+      font-size: 15px;
+      font-weight: normal;
+      letter-spacing: -0.01em;
+    }
+
+    .rest-card-meta {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      color: var(--gray);
+      margin-top: 2px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .rest-price {
+      color: #b7860b;
+      font-weight: 500;
+    }
+
+    .rest-card-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    .rest-card.active .rest-card-body { max-height: 400px; }
+
+    .rest-card-content { padding: 16px 16px 16px 16px; }
+
+    .rest-desc {
+      font-size: 13px;
+      color: #444;
+      line-height: 1.75;
+      margin-bottom: 12px;
+    }
+
+    .rest-details {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .rest-detail-row {
+      display: flex;
+      gap: 8px;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .rest-detail-icon { flex-shrink: 0; }
+
+    /* ── RIGHT PANEL (MAP) ── */
+    .right { flex: 1; height: 100%; position: relative; }
+    #tokyo-map { width: 100%; height: 100%; }
+
+    /* ── MAP CONTROL BUTTONS ── */
+    .map-controls {
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .map-ctrl-btn {
+      background: rgba(255,255,255,0.94);
+      backdrop-filter: blur(8px);
+      border: 1.5px solid var(--border);
+      padding: 7px 16px;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--gray);
+      border-radius: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      white-space: nowrap;
+      transition: all 0.18s;
+    }
+
+    .map-ctrl-btn:hover { border-color: #aaa; color: var(--black); }
+    .map-ctrl-btn.on { border-color: var(--black); color: var(--black); }
+
+    .ctrl-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      opacity: 0.45;
+      transition: opacity 0.18s;
+      flex-shrink: 0;
+    }
+
+    .map-ctrl-btn.on .ctrl-dot { opacity: 1; }
+
+    /* ── LEAFLET POPUP ── */
+    .leaflet-popup-content-wrapper {
+      border-radius: 3px !important;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.13) !important;
+      padding: 0 !important;
+      overflow: hidden;
+    }
+
+    .leaflet-popup-content { margin: 0 !important; }
+
+    .map-popup { padding: 20px 22px; min-width: 220px; }
+
+    .map-popup-day {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      margin-bottom: 5px;
+      font-weight: 600;
+    }
+
+    .map-popup-name {
+      font-size: 18px;
+      font-family: 'Georgia', serif;
+      margin-bottom: 14px;
+      color: #111;
+    }
+
+    .map-popup-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .map-popup-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+    .map-popup-text {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 12.5px;
+      color: #444;
+      line-height: 1.5;
+    }
+
+    .map-popup-text strong { color: #111; font-weight: 500; }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      html, body { overflow: auto; }
+      .app { flex-direction: column; height: auto; }
+      .left { width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+      .day-panels { min-height: 60vh; }
+      .right { height: 60vh; flex: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <span class="nav-logo">Tokyo &nbsp;·&nbsp; May 2026</span>
+    <span class="nav-hint">Click a place to see it on the map</span>
+  </nav>
+
+  <!-- APP -->
+  <div class="app">
+
+    <!-- LEFT PANEL -->
+    <div class="left">
+
+      <!-- CITY HEADER (fixed) -->
+      <div class="city-header">
+        <p class="city-eyebrow">May 9 – 16, 2026</p>
+        <h1 class="city-name">Tokyo</h1>
+        <p class="city-jp">東京</p>
+      </div>
+
+      <!-- STATS (fixed) -->
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-num">8</span>
+          <span class="stat-label">Days</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">8</span>
+          <span class="stat-label">Places</span>
+        </div>
+        <div class="stat">
+          <span class="stat-num">1</span>
+          <span class="stat-label">Day Trip</span>
+        </div>
+      </div>
+
+      <!-- DAY TABS (fixed) -->
+      <div class="day-tabs" id="dayTabs"></div>
+
+      <!-- DAY PANELS (scrollable) -->
+      <div class="day-panels" id="dayPanels"></div>
+
+    </div>
+
+    <!-- RIGHT: MAP -->
+    <div class="right">
+      <div id="tokyo-map"></div>
+      <div class="map-controls">
+        <button class="map-ctrl-btn on" id="areaToggle" onclick="toggleAreas()">
+          <span class="ctrl-dot" style="background:#c0392b;"></span>
+          Popular Areas
+        </button>
+        <button class="map-ctrl-btn" id="restToggle" onclick="toggleRestaurants()">
+          <span class="ctrl-dot" style="background:#e87722;"></span>
+          Restaurants
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // ─────────────────────────────────────────
+    // ITINERARY DATA
+    // ─────────────────────────────────────────
+    const days = [
+      {
+        id: 1,
+        date: "May 9",
+        label: "Arrival",
+        title: "Land & Settle In",
+        area: null,
+        color: null,
+        places: [],
+        restaurants: []
+      },
+      {
+        id: 2,
+        date: "May 10",
+        label: "Day 2",
+        title: "Fashion, Boulevards & the Canal",
+        area: "Harajuku · Omotesando · Nakameguro",
+        color: "#e67e22",
+        places: [
+          {
+            name: "Harajuku",
+            lat: 35.6704, lng: 139.7025,
+            station: "Harajuku Station",
+            line: "JR Yamanote Line",
+            walk: "3 min walk",
+            desc: "The epicentre of Tokyo's youth fashion scene. Takeshita Street is narrow, loud, and packed with crepe stalls, candy-coloured fashion, and costume shops. Two minutes away, the atmosphere completely changes.",
+            highlights: [
+              { icon: "👗", title: "Takeshita Street", note: "The main pedestrian strip — best visited mid-morning before the crowds peak." },
+              { icon: "🌿", title: "Meiji Shrine", note: "A short walk from Harajuku Station — forested, quiet, and one of Tokyo's most peaceful spots." },
+              { icon: "🍓", title: "Marion Crepes", note: "A Harajuku institution. Get the strawberry cream crepe and eat it while you walk." },
+            ]
+          },
+          {
+            name: "Omotesando",
+            lat: 35.6641, lng: 139.7133,
+            station: "Omotesando Station",
+            line: "Ginza / Chiyoda / Hanzomon Lines",
+            walk: "2 min walk",
+            desc: "Often called Tokyo's Champs-Élysées — a wide, tree-lined boulevard of flagship stores, concept boutiques, and excellent cafés. The contrast with Takeshita Street, just 10 minutes away, is striking.",
+            highlights: [
+              { icon: "🏛️", title: "Prada & flagship architecture", note: "Herzog & de Meuron's Prada building and Tadao Ando's Omotesando Hills are worth seeing as architecture alone." },
+              { icon: "☕", title: "Café culture", note: "Some of Tokyo's best third-wave coffee here — Omotesando Koffee and Streamer Coffee are both excellent." },
+              { icon: "🛍️", title: "Side streets", note: "The small streets branching off Omotesando (called Urahara) have the most interesting independent boutiques." },
+            ]
+          },
+          {
+            name: "Nakameguro",
+            lat: 35.6450, lng: 139.6980,
+            station: "Nakameguro Station",
+            line: "Tokyu Toyoko / Tokyo Metro Hibiya Line",
+            walk: "3 min walk",
+            desc: "Walk the Meguro River canal — lined with restaurants, independent cafés, and boutiques. This is the neighbourhood Tokyo's creative class calls home. Especially beautiful at dusk when the lanterns come on.",
+            highlights: [
+              { icon: "🌊", title: "Meguro River walk", note: "Follow the canal in either direction from the station. Most places worth stopping at are within a 15-min walk." },
+              { icon: "📚", title: "Tsutaya Books", note: "The Daikanyama Tsutaya (a short walk away) is one of the most beautiful bookshops in the world." },
+              { icon: "🍽️", title: "Dinner options", note: "Great neighbourhood for dinner — try Onigiri Asakusa Yadoroku for a lighter end to the day." },
+            ]
+          }
+        ],
+        restaurants: [
+          {
+            area: "Near Harajuku",
+            places: [
+              { name: "Afuri Harajuku", lat: 35.6696, lng: 139.7025, cuisine: "Ramen", price: "¥¥", desc: "Famous for yuzu-shio ramen — a fragrant, lighter broth that's a refreshing contrast to the usual tonkotsu. Clean, modern space right in Harajuku.", hours: "11am–11pm daily", address: "3-63-1 Sendagaya, Shibuya" },
+              { name: "Marion Crepes", lat: 35.6706, lng: 139.7022, cuisine: "Crepes", price: "¥", desc: "A Harajuku icon since 1976. Order the strawberry cream and eat it while strolling Takeshita Street. Often a short queue — worth it.", hours: "11am–8pm daily", address: "Takeshita Street, Harajuku" }
+            ]
+          },
+          {
+            area: "Near Omotesando",
+            places: [
+              { name: "bills Omotesando", lat: 35.6630, lng: 139.7115, cuisine: "All-day brunch", price: "¥¥¥", desc: "The Tokyo outpost of the legendary Sydney brunch spot. Their ricotta hotcakes are world-famous. Book ahead or arrive right at opening to avoid a wait.", hours: "9am–11pm daily", address: "4F ROX-N, 3-1-3 Jingumae, Shibuya" },
+              { name: "Omotesando Koffee", lat: 35.6652, lng: 139.7121, cuisine: "Coffee", price: "¥", desc: "A minimalist cube coffee bar in a traditional machiya house. Among the most beautiful coffee spots in Tokyo, and the espresso lives up to the setting.", hours: "11am–7pm (closed Tue)", address: "4-15-3 Jingumae, Shibuya" }
+            ]
+          },
+          {
+            area: "Near Nakameguro",
+            places: [
+              { name: "Nakameguro Taproom", lat: 35.6447, lng: 139.6985, cuisine: "Craft beer & bar food", price: "¥¥", desc: "Baird Brewing's canal-side taproom. A great spot for a late-afternoon beer watching the sun drop over the Meguro River. Rotating taps, good snacks.", hours: "5pm–midnight (Sat–Sun from 3pm)", address: "2-1-3 Kamimeguro, Meguro" },
+              { name: "Chano-ma Daikanyama", lat: 35.6487, lng: 139.7020, cuisine: "Japanese-fusion café", price: "¥¥", desc: "Low tables, floor cushions, and a long menu that works equally well for lunch or a late-night dinner. A Nakameguro local favourite — book ahead on weekends.", hours: "11:30am–midnight", address: "19-8 Sarugakucho, Shibuya" }
+            ]
+          }
+        ]
+      },
+      {
+        id: 3,
+        date: "May 11",
+        label: "Day 3",
+        title: "The West Side — Slow & Local",
+        area: "Shimokitazawa · Kichijoji",
+        color: "#8e44ad",
+        places: [
+          {
+            name: "Shimokitazawa",
+            lat: 35.6612, lng: 139.6679,
+            station: "Shimokitazawa Station",
+            line: "Odakyu / Keio Inokashira Line",
+            walk: "2 min walk",
+            desc: "Tokyo's most beloved bohemian neighbourhood. Narrow streets, no chain stores, vintage clothing everywhere, indie record shops, and tiny live music venues packed into a space you can walk across in 20 minutes.",
+            highlights: [
+              { icon: "🎵", title: "Live music venues", note: "Shimokita has more live music venues per block than almost anywhere in Tokyo. Check what's on the night before." },
+              { icon: "👔", title: "Vintage shopping", note: "Chicago, Flamingo, and dozens of no-name shops. Budget 2–3 hours if you're into it." },
+              { icon: "☕", title: "Coffee & lunch", note: "Shirohige's Cream Puff Factory (Totoro-shaped creampuffs) is a short walk — silly but fun." },
+            ]
+          },
+          {
+            name: "Kichijoji",
+            lat: 35.7030, lng: 139.5799,
+            station: "Kichijoji Station",
+            line: "JR Chuo Line / Keio Inokashira Line",
+            walk: "3 min walk",
+            desc: "Consistently voted Tokyo's most desirable neighbourhood to live in. Inokashira Park is lovely, the covered arcade shopping street (Sunroad) is fun, and the food options are excellent.",
+            highlights: [
+              { icon: "🌳", title: "Inokashira Park", note: "A beautiful park with a pond, row boats, and a small Ghibli Museum nearby (book tickets way in advance)." },
+              { icon: "🍢", title: "Yakitori Alley", note: "Behind the station — a cluster of tiny yakitori stalls that have been there for decades. Go for dinner." },
+              { icon: "🎨", title: "Ghibli Museum", note: "Only 15 min walk from the station. Requires advance booking — check availability before the trip." },
+            ]
+          }
+        ],
+        restaurants: [
+          {
+            area: "Near Shimokitazawa",
+            places: [
+              { name: "Bear Pond Espresso", lat: 35.6611, lng: 139.6682, cuisine: "Coffee", price: "¥", desc: "A cult coffee bar that opens at noon and closes when the beans run out — usually by 3pm. Their Angel-in-the-Darkness espresso is legendary in Tokyo. Arrive early.", hours: "12pm–4pm (or until beans run out)", address: "2-36-12 Kitazawa, Setagaya" },
+              { name: "Shirohige's Cream Puff Factory", lat: 35.6579, lng: 139.6620, cuisine: "Bakery / Pastry", price: "¥", desc: "Totoro-shaped cream puffs baked fresh in a small shop a short walk from Shimokitazawa. Charming and delicious — great mid-morning snack.", hours: "10am–6pm (closed Mon)", address: "5-3-1 Daizawa, Setagaya" }
+            ]
+          },
+          {
+            area: "Near Kichijoji",
+            places: [
+              { name: "Harmonica Yokocho", lat: 35.7032, lng: 139.5791, cuisine: "Izakaya alley", price: "¥¥", desc: "A warren of tiny bars and izakayas just outside Kichijoji's north exit. Squeeze into a 6-seat bar and order yakitori and highballs — one of Tokyo's best late-night experiences.", hours: "6pm–midnight (varies by stall)", address: "1-1-2 Kichijoji Honcho, Musashino" },
+              { name: "Satou Kichijoji", lat: 35.7028, lng: 139.5798, cuisine: "Menchi-katsu (street food)", price: "¥", desc: "There is always a queue, and it's always worth it. Satou's menchi-katsu — a deep-fried minced beef cutlet — is one of the best street food bites in all of Tokyo. Eat it hot.", hours: "10am–7pm daily", address: "1-1-8 Kichijoji Honcho, Musashino" }
+            ]
+          }
+        ]
+      },
+      {
+        id: 4,
+        date: "May 12",
+        label: "Day 4",
+        title: "Old Tokyo & the North",
+        area: "Yanaka Ginza · Ikebukuro",
+        color: "#d4ac0d",
+        places: [
+          {
+            name: "Yanaka Ginza",
+            lat: 35.7272, lng: 139.7664,
+            station: "Sendagi Station",
+            line: "Tokyo Metro Chiyoda Line",
+            walk: "5 min walk",
+            desc: "One of the few old shopping streets that survived both the wartime bombing and the developers. It feels like a neighbourhood from the 1950s — craft sellers, sembei cracker shops, cats lounging in doorways.",
+            highlights: [
+              { icon: "🐈", title: "Yanaka Cemetery cats", note: "The cemetery adjacent to the shopping street is home to a famous colony of semi-wild cats. Not spooky — actually lovely." },
+              { icon: "🍡", title: "Street food", note: "Grilled skewers, mochi, and freshly made crackers at every other stall. Bring cash — many stalls are cash only." },
+              { icon: "🏮", title: "Yanesen neighbourhood", note: "The broader Yanaka, Nezu, and Sendagi area (Yanesen) is perfect for a slow morning wander." },
+            ]
+          },
+          {
+            name: "Ikebukuro",
+            lat: 35.7295, lng: 139.7109,
+            station: "Ikebukuro Station",
+            line: "JR Yamanote / Marunouchi / Fukutoshin Lines",
+            walk: "3 min walk",
+            desc: "North Tokyo's major commercial hub — a very different energy from Shibuya or Shinjuku. Sunshine City is a mall-and-attractions complex worth exploring, and the food hall in Tobu Department Store is one of the city's best.",
+            highlights: [
+              { icon: "🏢", title: "Sunshine City", note: "A massive complex with a shopping mall, aquarium, planetarium, and observation deck all in one building." },
+              { icon: "🎮", title: "Animate Ikebukuro", note: "Seven floors of anime merchandise — the largest in Japan if that's your thing." },
+              { icon: "🍱", title: "Tobu Department Store basement", note: "The depachika (department store basement food hall) here is spectacular — a great spot to pick up dinner or snacks." },
+            ]
+          }
+        ],
+        restaurants: [
+          {
+            area: "Near Yanaka",
+            places: [
+              { name: "Yanaka Beer Hall", lat: 35.7264, lng: 139.7671, cuisine: "Beer hall & bar food", price: "¥¥", desc: "A neighbourhood institution in a converted warehouse near Yanaka Ginza. Craft beers, good snacks, and a relaxed local crowd. Good for a late afternoon stop after the shopping street.", hours: "3pm–11pm (closed Mon)", address: "3-15-1 Yanaka, Taito" },
+              { name: "Niku no Yamamoto", lat: 35.7270, lng: 139.7658, cuisine: "Croquette (street food)", price: "¥", desc: "A legendary Yanaka croquette shop — beef and potato, fried to order right in front of you. One of the most satisfying ¥100 snacks in the city. Small queue, fast moving.", hours: "10am–5pm (or until sold out)", address: "3-8-6 Yanaka, Taito" }
+            ]
+          },
+          {
+            area: "Near Ikebukuro",
+            places: [
+              { name: "Tobu Depachika", lat: 35.7299, lng: 139.7118, cuisine: "Department store food hall", price: "¥–¥¥¥", desc: "The basement food floors of Tobu Department Store are among Tokyo's best — prepared foods, sweets, fresh sushi, and lunch boxes from dozens of vendors. Good for a quick midday pick-up.", hours: "10am–8pm daily", address: "B1–B2F Tobu Ikebukuro, Toshima" },
+              { name: "Gyoza Stadium", lat: 35.7283, lng: 139.7098, cuisine: "Gyoza (dumplings)", price: "¥¥", desc: "A theme-park-style food hall in Sunshine City dedicated entirely to gyoza from around Japan. A bit gimmicky but genuinely fun — and the dumplings are good.", hours: "11am–10pm daily", address: "Sunshine City World Import Mart, Toshima" }
+            ]
+          }
+        ]
+      },
+      {
+        id: 5,
+        date: "May 13",
+        label: "Day 5",
+        title: "Fuji Views & the Outlets",
+        area: "Gotemba · Day Trip",
+        color: "#2980b9",
+        places: [
+          {
+            name: "Gotemba",
+            lat: 35.3108, lng: 138.9330,
+            station: "Gotemba Station",
+            line: "JR Gotemba Line",
+            walk: "8 min walk",
+            desc: "A full-day trip outside Tokyo to the base of Mt. Fuji. On a clear day the mountain dominates the entire sky. The Gotemba Premium Outlets are right here — Japan's largest outlet mall with Fuji as the backdrop.",
+            highlights: [
+              { icon: "🗻", title: "Mt. Fuji views", note: "Best views are in the morning before clouds move in. Arrive early — the 7:30am bus from Shinjuku is worth it." },
+              { icon: "🛍️", title: "Gotemba Premium Outlets", note: "Over 200 outlet shops. Much cheaper than Tokyo for brands like Coach, Kate Spade, and Japanese labels." },
+              { icon: "🚌", title: "Getting there", note: "Highway bus from Shinjuku Expressway Bus Terminal, ~1h 40min. Buy tickets in advance at the terminal or online." },
+            ]
+          }
+        ],
+        restaurants: [
+          {
+            area: "Near Gotemba Outlets",
+            places: [
+              { name: "Gotemba Outlets Food Court", lat: 35.3108, lng: 138.9326, cuisine: "Various", price: "¥¥", desc: "A well-stocked food court within the outlet complex with Japanese and Western options. Convenient for lunch without leaving the complex — ramen, curry, and set meal stalls all here.", hours: "10am–8pm daily", address: "Gotemba Premium Outlets, Gotemba" },
+              { name: "Fujisan Restaurant Urara", lat: 35.3096, lng: 138.9305, cuisine: "Japanese set meals", price: "¥¥", desc: "A local restaurant near the station with views of Fuji on clear days. Serves classic teishoku set meals — good value, reliable, and not touristy.", hours: "11am–9pm daily", address: "Near Gotemba Station, Gotemba" }
+            ]
+          }
+        ]
+      },
+      {
+        id: 6,
+        date: "May 14",
+        label: "Day 6",
+        title: "To be decided",
+        area: null,
+        color: null,
+        places: [],
+        restaurants: [],
+        tbd: true
+      },
+      {
+        id: 7,
+        date: "May 15",
+        label: "Day 7",
+        title: "To be decided",
+        area: null,
+        color: null,
+        places: [],
+        restaurants: [],
+        tbd: true
+      },
+      {
+        id: 8,
+        date: "May 16",
+        label: "Depart",
+        title: "Last Morning, Then Sayonara",
+        area: null,
+        color: null,
+        places: [],
+        restaurants: []
+      }
+    ];
+
+    // ─────────────────────────────────────────
+    // RENDER TABS & PANELS
+    // ─────────────────────────────────────────
+    const tabsEl = document.getElementById('dayTabs');
+    const panelsEl = document.getElementById('dayPanels');
+
+    days.forEach((day, i) => {
+      // TAB
+      const tab = document.createElement('button');
+      tab.className = 'day-tab' + (i === 0 ? ' active' : '');
+      tab.dataset.day = day.id;
+      tab.innerHTML = `
+        <span class="tab-num">${day.label}</span>
+        <span class="tab-date">${day.date}</span>
+        ${day.color ? `<span class="tab-dot" style="background:${day.color};"></span>` : '<span class="tab-dot" style="background:transparent;"></span>'}
+      `;
+      tab.addEventListener('click', () => switchDay(day.id));
+      tabsEl.appendChild(tab);
+
+      // PANEL
+      const panel = document.createElement('div');
+      panel.className = 'day-panel' + (i === 0 ? ' active' : '');
+      panel.id = `panel-${day.id}`;
+
+      if (day.tbd) {
+        panel.innerHTML = `
+          <div class="tbd-panel">
+            <span style="font-size:32px;">✦</span>
+            <p>More places coming soon</p>
+          </div>`;
+      } else if (day.places.length === 0) {
+        // Arrival or departure
+        const msgs = {
+          1: 'Touch down, grab your Suica card, and settle in. A walk and a bowl of ramen is all you need tonight.',
+          8: 'A final kissaten breakfast, one last walk, then the Narita Express from Shinjuku Station (~90 min to airport). いってらっしゃい。'
+        };
+        panel.innerHTML = `
+          <div class="panel-header">
+            <p class="panel-day-label">${day.label} · ${day.date}</p>
+            <h2 class="panel-title">${day.title}</h2>
+          </div>
+          <div style="padding: 28px 32px; font-size:14px; color:#555; line-height:1.8;">
+            ${msgs[day.id] || ''}
+          </div>`;
+      } else {
+        const areaHTML = day.area
+          ? `<p class="panel-area" style="color:${day.color};">${day.area}</p>`
+          : '';
+        const cardsHTML = day.places.map(p => `
+          <div class="place-card" id="card-${p.name.replace(/\s+/g,'-')}">
+            <div class="place-card-header" onclick="toggleCard('${p.name}')">
+              <div class="place-card-left">
+                <div class="place-color-bar" style="background:${day.color};"></div>
+                <div>
+                  <div class="place-card-name">${p.name}</div>
+                  <div class="place-card-station">🚉 ${p.station} · ${p.walk}</div>
+                </div>
+              </div>
+              <button class="place-map-btn" onclick="event.stopPropagation(); focusPlace('${p.name}')">
+                ↗ Map
+              </button>
+            </div>
+            <div class="place-card-body">
+              <div class="place-card-content">
+                <p class="place-section-label">About</p>
+                <p class="place-desc">${p.desc}</p>
+                <p class="place-section-label">What to see</p>
+                <div class="place-highlights">
+                  ${p.highlights.map(h => `
+                    <div class="place-highlight">
+                      <span class="highlight-icon">${h.icon}</span>
+                      <span class="highlight-text"><strong>${h.title}</strong> — ${h.note}</span>
+                    </div>`).join('')}
+                </div>
+              </div>
+            </div>
+          </div>`).join('');
+
+        // Restaurant section HTML
+        let restHTML = '';
+        if (day.restaurants && day.restaurants.length > 0) {
+          const groupsHTML = day.restaurants.map(group => `
+            <div class="restaurant-area-group">
+              <div class="restaurant-area-label">${group.area}</div>
+              <div class="restaurant-cards">
+                ${group.places.map(r => `
+                  <div class="rest-card" id="rest-${r.name.replace(/[^a-zA-Z0-9]/g,'-')}">
+                    <div class="rest-card-header" onclick="toggleRestCard('${r.name.replace(/'/g,"\\'")}')">
+                      <div class="rest-card-left">
+                        <span class="rest-fork">🍴</span>
+                        <div>
+                          <div class="rest-card-name">${r.name}</div>
+                          <div class="rest-card-meta">
+                            <span>${r.cuisine}</span>
+                            <span style="color:#ddd;">·</span>
+                            <span class="rest-price">${r.price}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <button class="place-map-btn" onclick="event.stopPropagation(); focusRestaurant('${r.name.replace(/'/g,"\\'")}')">
+                        ↗ Map
+                      </button>
+                    </div>
+                    <div class="rest-card-body">
+                      <div class="rest-card-content">
+                        <p class="rest-desc">${r.desc}</p>
+                        <div class="rest-details">
+                          <div class="rest-detail-row"><span class="rest-detail-icon">🕐</span><span>${r.hours}</span></div>
+                          <div class="rest-detail-row"><span class="rest-detail-icon">📍</span><span>${r.address}</span></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>`).join('')}
+              </div>
+            </div>`).join('');
+
+          restHTML = `
+            <div class="restaurant-section">
+              <div class="restaurant-section-header">
+                <span class="restaurant-section-label">🍴 Where to eat</span>
+              </div>
+              ${groupsHTML}
+            </div>`;
+        }
+
+        panel.innerHTML = `
+          <div class="panel-header">
+            <p class="panel-day-label">${day.label} · ${day.date}</p>
+            <h2 class="panel-title">${day.title}</h2>
+            ${areaHTML}
+          </div>
+          <div class="place-cards">${cardsHTML}</div>
+          ${restHTML}`;
+      }
+
+      panelsEl.appendChild(panel);
+    });
+
+    // ─────────────────────────────────────────
+    // MAP SETUP
+    // ─────────────────────────────────────────
+    const map = L.map('tokyo-map', {
+      center: [35.672, 139.700],
+      zoom: 12,
+      zoomControl: true,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd', maxZoom: 19,
+    }).addTo(map);
+
+    function makeIcon(color, size = 13) {
+      return L.divIcon({
+        className: '',
+        html: `<div style="width:${size}px;height:${size}px;background:${color};border:2.5px solid white;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.28);"></div>`,
+        iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -(size/2+6)]
+      });
+    }
+
+    const markerIndex = {};
+
+    days.forEach(day => {
+      if (!day.places) return;
+      day.places.forEach(p => {
+        const popup = `
+          <div class="map-popup">
+            <div class="map-popup-day" style="color:${day.color};">${day.label} · ${day.date}</div>
+            <div class="map-popup-name">${p.name}</div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🚉</span>
+              <div class="map-popup-text"><strong>${p.station}</strong><br>${p.line}</div>
+            </div>
+            <div class="map-popup-row">
+              <span class="map-popup-icon">🚶</span>
+              <div class="map-popup-text">${p.walk} from station</div>
+            </div>
+          </div>`;
+
+        const marker = L.marker([p.lat, p.lng], { icon: makeIcon(day.color) })
+          .bindPopup(popup, { maxWidth: 280, closeButton: false })
+          .addTo(map);
+
+        markerIndex[p.name] = { marker, day, place: p };
+      });
+    });
+
+    // ─────────────────────────────────────────
+    // SWITCH DAY TAB
+    // ─────────────────────────────────────────
+    let activeDay = 1;
+
+    function switchDay(dayId) {
+      // Update tabs
+      document.querySelectorAll('.day-tab').forEach(t => {
+        t.classList.toggle('active', parseInt(t.dataset.day) === dayId);
+      });
+      // Update panels
+      document.querySelectorAll('.day-panel').forEach(p => {
+        p.classList.toggle('active', p.id === `panel-${dayId}`);
+      });
+
+      activeDay = dayId;
+      map.closePopup();
+
+      // Fit map to this day's places
+      const day = days.find(d => d.id === dayId);
+      if (day && day.places && day.places.length > 0) {
+        const latlngs = day.places.map(p => [p.lat, p.lng]);
+        if (latlngs.length === 1) {
+          map.flyTo(latlngs[0], 14, { duration: 0.7 });
+        } else {
+          map.flyToBounds(L.latLngBounds(latlngs).pad(0.35), { duration: 0.7 });
+        }
+      } else {
+        map.flyTo([35.672, 139.700], 12, { duration: 0.7 });
+      }
+
+      // Reset all card active states
+      document.querySelectorAll('.place-card').forEach(c => c.classList.remove('active'));
+    }
+
+    // ─────────────────────────────────────────
+    // TOGGLE PLACE CARD EXPAND
+    // ─────────────────────────────────────────
+    function toggleCard(name) {
+      const cardId = `card-${name.replace(/\s+/g,'-')}`;
+      const card = document.getElementById(cardId);
+      if (!card) return;
+      const wasActive = card.classList.contains('active');
+      // Close all cards in current panel
+      document.querySelectorAll('.place-card').forEach(c => c.classList.remove('active'));
+      if (!wasActive) card.classList.add('active');
+    }
+
+    // ─────────────────────────────────────────
+    // FOCUS PLACE ON MAP
+    // ─────────────────────────────────────────
+    function focusPlace(name) {
+      const entry = markerIndex[name];
+      if (!entry) return;
+      const { marker, place, day } = entry;
+
+      // Reset all marker sizes
+      Object.values(markerIndex).forEach(e => {
+        e.marker.setIcon(makeIcon(e.day.color, 13));
+      });
+      // Enlarge focused marker
+      marker.setIcon(makeIcon(day.color, 20));
+
+      map.flyTo([place.lat, place.lng], 17, { duration: 1.1 });
+      setTimeout(() => marker.openPopup(), 1000);
+
+      // Also expand the card
+      const cardId = `card-${name.replace(/\s+/g,'-')}`;
+      document.querySelectorAll('.place-card').forEach(c => c.classList.remove('active'));
+      const card = document.getElementById(cardId);
+      if (card) card.classList.add('active');
+    }
+
+    // ─────────────────────────────────────────
+    // POPULAR AREA HIGHLIGHTS
+    // ─────────────────────────────────────────
+    const areas = [
+      { name: "Shinjuku",       lat: 35.6938, lng: 139.7000, r: 650 },
+      { name: "Shibuya",        lat: 35.6588, lng: 139.6999, r: 500 },
+      { name: "Harajuku",       lat: 35.6702, lng: 139.7026, r: 320 },
+      { name: "Omotesando",     lat: 35.6641, lng: 139.7140, r: 280 },
+      { name: "Ginza",          lat: 35.6714, lng: 139.7650, r: 520 },
+      { name: "Asakusa",        lat: 35.7116, lng: 139.7975, r: 520 },
+      { name: "Akihabara",      lat: 35.7023, lng: 139.7740, r: 360 },
+      { name: "Roppongi",       lat: 35.6627, lng: 139.7310, r: 400 },
+      { name: "Ueno",           lat: 35.7141, lng: 139.7744, r: 420 },
+      { name: "Ikebukuro",      lat: 35.7295, lng: 139.7109, r: 600 },
+      { name: "Shimokitazawa",  lat: 35.6615, lng: 139.6681, r: 340 },
+      { name: "Nakameguro",     lat: 35.6450, lng: 139.6983, r: 300 },
+      { name: "Kichijoji",      lat: 35.7036, lng: 139.5797, r: 420 },
+      { name: "Yanaka",         lat: 35.7220, lng: 139.7650, r: 330 },
+      { name: "Odaiba",         lat: 35.6262, lng: 139.7760, r: 680 },
+      { name: "Marunouchi",     lat: 35.6812, lng: 139.7671, r: 380 },
+      { name: "Daikanyama",     lat: 35.6484, lng: 139.7025, r: 260 },
+    ];
+
+    const areaLayer = L.layerGroup();
+
+    areas.forEach(a => {
+      // Shaded circle
+      L.circle([a.lat, a.lng], {
+        radius: a.r,
+        color: '#c0392b',
+        weight: 1,
+        opacity: 0.18,
+        fillColor: '#c0392b',
+        fillOpacity: 0.05,
+        interactive: false,
+        pane: 'shadowPane',
+      }).addTo(areaLayer);
+
+      // Text label
+      L.marker([a.lat, a.lng], {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="
+            font-family:'Helvetica Neue',sans-serif;
+            font-size:10px;
+            font-weight:700;
+            letter-spacing:0.12em;
+            text-transform:uppercase;
+            color:rgba(140,50,40,0.75);
+            white-space:nowrap;
+            text-shadow:
+              0 0 6px rgba(255,255,255,1),
+              0 0 6px rgba(255,255,255,1),
+              0 0 10px rgba(255,255,255,0.9);
+          ">${a.name}</div>`,
+          iconSize: [140, 16],
+          iconAnchor: [70, 8],
+        }),
+        interactive: false,
+        zIndexOffset: -200,
+      }).addTo(areaLayer);
+    });
+
+    // Start with areas visible
+    areaLayer.addTo(map);
+    let areasOn = true;
+
+    function toggleAreas() {
+      const btn = document.getElementById('areaToggle');
+      if (areasOn) {
+        map.removeLayer(areaLayer);
+        btn.classList.remove('on');
+      } else {
+        map.addLayer(areaLayer);
+        btn.classList.add('on');
+      }
+      areasOn = !areasOn;
+    }
+
+    // ─────────────────────────────────────────
+    // RESTAURANT MAP MARKERS
+    // ─────────────────────────────────────────
+    const restLayer = L.layerGroup();
+    let restsOn = false;
+    const restMarkerIndex = {};
+
+    function makeRestIcon(size = 13, active = false) {
+      const bg = active ? '#c0392b' : '#e87722';
+      return L.divIcon({
+        className: '',
+        html: `<div style="width:${size}px;height:${size}px;background:${bg};border:2px solid white;border-radius:3px;box-shadow:0 2px 8px rgba(0,0,0,0.28);display:flex;align-items:center;justify-content:center;font-size:${Math.max(7,size-4)}px;line-height:1;">🍴</div>`,
+        iconSize: [size, size], iconAnchor: [size/2, size/2], popupAnchor: [0, -(size/2+4)]
+      });
+    }
+
+    days.forEach(day => {
+      if (!day.restaurants) return;
+      day.restaurants.forEach(group => {
+        group.places.forEach(r => {
+          const popup = `
+            <div class="map-popup">
+              <div class="map-popup-day" style="color:#e87722;">${group.area}</div>
+              <div class="map-popup-name">${r.name}</div>
+              <div class="map-popup-row">
+                <span class="map-popup-icon">🍽️</span>
+                <div class="map-popup-text"><strong>${r.cuisine}</strong> · <span style="color:#b7860b;">${r.price}</span></div>
+              </div>
+              <div class="map-popup-row">
+                <span class="map-popup-icon">🕐</span>
+                <div class="map-popup-text">${r.hours}</div>
+              </div>
+            </div>`;
+          const marker = L.marker([r.lat, r.lng], { icon: makeRestIcon(13) })
+            .bindPopup(popup, { maxWidth: 260, closeButton: false })
+            .addTo(restLayer);
+          restMarkerIndex[r.name] = { marker, lat: r.lat, lng: r.lng };
+        });
+      });
+    });
+
+    function focusRestaurant(name) {
+      const entry = restMarkerIndex[name];
+      if (!entry) return;
+
+      // Make sure restaurant layer is visible
+      if (!restsOn) {
+        map.addLayer(restLayer);
+        restsOn = true;
+        document.getElementById('restToggle').classList.add('on');
+      }
+
+      // Reset all restaurant markers
+      Object.values(restMarkerIndex).forEach(e => e.marker.setIcon(makeRestIcon(13, false)));
+      // Enlarge focused marker
+      entry.marker.setIcon(makeRestIcon(20, true));
+
+      map.flyTo([entry.lat, entry.lng], 17, { duration: 1.1 });
+      setTimeout(() => entry.marker.openPopup(), 1000);
+    }
+
+    function toggleRestaurants() {
+      const btn = document.getElementById('restToggle');
+      if (restsOn) {
+        map.removeLayer(restLayer);
+        btn.classList.remove('on');
+      } else {
+        map.addLayer(restLayer);
+        btn.classList.add('on');
+      }
+      restsOn = !restsOn;
+    }
+
+    // ─────────────────────────────────────────
+    // RESTAURANT CARD TOGGLE
+    // ─────────────────────────────────────────
+    function toggleRestCard(name) {
+      const id = `rest-${name.replace(/[^a-zA-Z0-9]/g,'-')}`;
+      const card = document.getElementById(id);
+      if (!card) return;
+      const wasActive = card.classList.contains('active');
+      document.querySelectorAll('.rest-card').forEach(c => c.classList.remove('active'));
+      if (!wasActive) card.classList.add('active');
+    }
+
+    // Reset marker sizes when any popup closes
+    map.on('popupclose', () => {
+      Object.values(markerIndex).forEach(e => e.marker.setIcon(makeIcon(e.day.color, 13)));
+      Object.values(restMarkerIndex).forEach(e => e.marker.setIcon(makeRestIcon(13, false)));
+    });
+
+    // Initialise: fit map to day 1 (no places, so show Tokyo overview)
+    // Start on day 2 to show places right away
+    switchDay(2);
+  </script>
+
+</body>
+</html>
